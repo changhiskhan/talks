@@ -12,22 +12,25 @@ import tornado.web
 import tornado.websocket as websocket
 import tornado.ioloop
 
-class BarChartHandler(tornado.web.RequestHandler):
-
-    def get(self):
-        self.write(open("barchart.html").read())
-
+# Serve up the colormap
 class ColorMapHandler(tornado.web.RequestHandler):
 
     def get(self):
         self.write(open("colormap.html").read())
 
+# Serve up the force diagram
 class ForceVectorHandler(tornado.web.RequestHandler):
 
     def get(self):
         self.write(open("force.html").read())
 
+# Implement the websocket server
 class DataSocket(websocket.WebSocketHandler):
+    """
+    handle inbound messages
+    dispatch to appropriate data methods
+    send back a response
+    """
 
     def on_message(self, message):
         request = json.loads(message)
@@ -46,29 +49,6 @@ class DataSocket(websocket.WebSocketHandler):
         kind = req.get('type', 'data')
         return getattr(self, 'handle_%s' % kind)
 
-    def handle_data(self, request, frame):
-        return frame.to_json(orient='records')
-
-    def handle_schema(self, request, frame):
-        return json.dumps(list(frame.columns))
-
-    def handle_colinfo(self, request, frame):
-        rs = {}
-        if colname in frame:
-            col = frame[colname]
-            if com.is_float_dtype(col):
-                rs['kind'] = 'float'
-                rs['min'] = col.min()
-                rs['max'] = col.max()
-            else:
-                rs['kind'] = 'categorical'
-                rs['uniques'] = col.unique().tolist()
-        return json.dumps(rs)
-
-    def handle_shape(self, request, frame):
-        return json.dumps({'ncols' : len(frame.columns),
-                           'nrows' : len(frame)})
-
     def handle_agg(self, request, frame):
         return aggregate(frame, request).to_json(orient='records')
 
@@ -82,6 +62,7 @@ class DataSocket(websocket.WebSocketHandler):
         store.close()
         return vname + ' updated'
 
+# Utility method to do aggregations
 def aggregate(frame, req):
     print 'aggregating'
     spec = req['spec']
@@ -102,6 +83,7 @@ def aggregate(frame, req):
     print rs
     return rs.reset_index()
 
+# Generate the tree structure for the force diagram
 def get_force_data(frame, req):
     print 'force'
     keys = ['PoliticalParty', 'State', 'Employer'];
@@ -131,10 +113,12 @@ def get_force_data(frame, req):
 
     return {'name': "contributions", 'children': to_records(top10)}
 
+# static file directory
 settings = {
     'static_path': os.path.dirname(__file__).rsplit('/')[0]
 }
 
+# inport the FEC data
 fpath = os.path.expanduser('~/Dropbox/data/fec.h5')
 store = pd.HDFStore(fpath)
 fec = store['fec_full']

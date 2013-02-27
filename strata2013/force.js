@@ -37,7 +37,7 @@ var vis = d3.select("body").append("svg:svg")
 
 
 function update() {
-  var nodes = flatten(root),
+  var nodes = flatten(root), // all nodes from root to leaves
       links = d3.layout.tree().links(nodes);
 
   // Restart the force layout.
@@ -99,7 +99,7 @@ function color(d) {
   return d._children ? "#3182bd" : d.children ? "#c6dbef" : "#ff7f0e";
 }
 
-// Toggle children on click.
+// Collapse or expand on click.
 function click(d) {
   if (d.children) {
     d._children = d.children;
@@ -108,7 +108,7 @@ function click(d) {
     d.children = d._children;
     d._children = null;
   }
-  update();
+  update(); // redraw
 }
 
 // Returns a list of all nodes under the root.
