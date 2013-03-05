@@ -49,6 +49,9 @@ class DataSocket(websocket.WebSocketHandler):
         kind = req.get('type', 'data')
         return getattr(self, 'handle_%s' % kind)
 
+    def allow_draft76(self):
+        return True
+
     def handle_agg(self, request, frame):
         return aggregate(frame, request).to_json(orient='records')
 
@@ -133,7 +136,6 @@ if __name__ == '__main__':
 
     application = tornado.web.Application([
         (r'/colormap', ColorMapHandler),
-        (r'/barchart', BarChartHandler),
         (r'/force', ForceVectorHandler),
         (r'/websocket', DataSocket),
         (r"/static/(.*)", tornado.web.StaticFileHandler,
